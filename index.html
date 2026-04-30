@@ -127,8 +127,8 @@
   }
   .rt-tab.dragging { opacity: 0.4; }
   .rt-tab.drag-over { background: var(--bg-elev-2); }
-  .rt-tab .rt-method { font-size: 13px; font-weight: 600; flex: 0 0 auto; color: var(--text); }
-  .rt-tab .rt-title { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 13px; }
+  .rt-tab .rt-method { font-size: 14px; font-weight: 600; flex: 0 0 auto; color: var(--text); }
+  .rt-tab .rt-title { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 14px; }
   .rt-tab .rt-close {
     width: 18px; height: 18px; flex: 0 0 18px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -216,7 +216,7 @@
   }
   .tab {
     background: transparent; border: none; color: var(--text-dim);
-    padding: var(--vpad) 14px; font-size: 13px; font-family: inherit;
+    padding: var(--vpad) 14px; font-size: 14px; font-family: inherit;
     cursor: pointer; border-bottom: 2px solid transparent;
     margin-bottom: -1px; position: relative;
   }
@@ -311,7 +311,7 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 0 12px; height: 53px;
     background: var(--bg-elev-2); border-bottom: 1px solid var(--border);
-    font-size: 12px; color: var(--text-dim); font-family: var(--sans);
+    font-size: 14px; color: var(--text-dim); font-family: var(--sans);
     box-sizing: border-box;
   }
   .copy-btn {
@@ -441,7 +441,7 @@ body.is-standalone .req-tabs-bar {
       <option value="DELETE">DELETE</option>
     </select>
     <input type="text" id="url" placeholder="https://api.example.com/endpoint" value="https://jsonplaceholder.typicode.com/posts/1" spellcheck="false" autocomplete="off" />
-    <button id="send-btn">SEND</button>
+    <button id="send-btn">Send</button>
   </div>
 
   <!-- Request tabs -->
@@ -507,7 +507,7 @@ body.is-standalone .req-tabs-bar {
         </div>
         <span id="response-empty-label">Response will appear here</span>
       </div>
-      <pre class="output empty" id="response-body">Click <strong style="color:var(--accent)">Send</strong> to make a request, or switch to <strong>PHP cURL</strong> to see the generated code.</pre>
+      <pre class="output empty" id="response-body">Click <strong style="color:white;">Send</strong> to make a request, or switch to <strong>PHP cURL</strong> to see the generated code.</pre>
     </div>
 
     <div class="output-pane hidden" id="out-code">
