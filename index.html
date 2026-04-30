@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>REST Client</title>
+
+<!-- PWA: manifest, theme color, favicon -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#161B22">
+<link rel="icon" href="/icons/icon-192.png">
+
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #161b22;
+    --bg-elev-2: #1c2128;
+    --bg-input: #0d1117;
+    --border: #30363d;
+    --border-strong: #444c56;
+    --text: #ffffff;
+    --text-dim: #8b949e;
+    --text-faint: #6e7681;
+    --accent: #1660b5;
+    --accent-hover: #1f7acc;
+    --success: #3fb950;
+    --success-bg: rgba(63, 185, 80, 0.15);
+    --warning: #d29922;
+    --warning-bg: rgba(210, 153, 34, 0.15);
+    --danger: #f85149;
+    --danger-bg: rgba(248, 81, 73, 0.15);
+    --get: #3fb950;
+    --post: #d29922;
+    --put: #1660b5;
+    --patch: #a371f7;
+    --delete: #f85149;
+    --radius: 5px;
+    --radius-lg: 5px;
+    --vpad: 12px; /* equal top & bottom padding */
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  *:focus, *:focus-visible { outline: none !important; }
+  button, input, select, textarea, a { -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+  /* Fullscreen tab strip wrapper */
+  .req-tabs-bar {
+    width: 100%;
+    border-bottom: 1px solid var(--border);
+    background: #161B22;
+  }
+  .req-tabs-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .app {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* Request tab strip */
+  .req-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none; /* Firefox: fully hide */
+  }
+  .req-tabs::-webkit-scrollbar {
+    height: 0;
+    background: transparent;
+  }
+  .req-tabs:hover::-webkit-scrollbar { height: 4px; }
+  .req-tabs::-webkit-scrollbar-track { background: transparent; }
+  .req-tabs::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: var(--radius);
+  }
+  .req-tabs::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+  .rt-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: var(--vpad) 14px; /* equal vertical padding */
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 0;
+    white-space: nowrap;
+    max-width: 220px;
+    flex: 0 0 auto;
+    justify-content: center;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .rt-tab:hover { color: var(--text); background: var(--bg-elev); }
+  .rt-tab.active {
+    color: var(--text);
+    background: var(--bg-elev);
+    border-bottom-color: var(--accent);
+  }
+  .rt-tab.dragging { opacity: 0.4; }
+  .rt-tab.drag-over { background: var(--bg-elev-2); }
+  .rt-tab .rt-method { font-size: 13px; font-weight: 600; flex: 0 0 auto; color: var(--text); }
+  .rt-tab .rt-title { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 13px; }
+  .rt-tab .rt-close {
+    width: 18px; height: 18px; flex: 0 0 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius); color: var(--text-faint); font-size: 16px;
+    background: transparent;
+    font-family: var(--sans);
+    line-height: 1;
+    padding: 0;
+    transform: none;
+  }
+  .rt-tab .rt-close:hover { background: var(--border); color: var(--text); }
+
+  button[data-id="1"] {
+    border-left: 1px solid var(--border);
+   }
+
+  .rt-new {
+    background: #161b22; border: none;
+    color: var(--text-dim);
+    padding: var(--vpad) 14px; /* equal vertical padding */
+    font-size: 16px; line-height: 1; cursor: pointer;
+    border-radius: 0; flex: 0 0 auto; margin-bottom: -1px;
+    position: sticky; right: 0; z-index: 2;
+  }
+  .rt-new:hover { color: var(--text); background: var(--bg-elev); }
+
+  /* Request bar */
+  .req-bar {
+    display: flex;
+    gap: 0;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    align-items: center;
+  }
+  .req-bar select#method {
+    border: none;
+    border-right: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    color: var(--text);
+    padding: var(--vpad) 30px var(--vpad) 16px; /* top/right/bottom/left */
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    outline: none;
+    min-width: 110px;
+    border-radius: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238b949e' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  .req-bar input#url {
+    flex: 1; border: none; background: transparent; color: var(--text);
+    padding: var(--vpad) 16px; font-size: 14px; font-family: var(--sans);
+    outline: none; height: auto; /* remove fixed height to match padding */
+  }
+  .req-bar input#url::placeholder { color: var(--text-faint); }
+  .req-bar button#send-btn {
+    border: none; background: var(--accent); color: #ffffff;
+    padding: var(--vpad) 28px; font-size: 14px; font-weight: 600;
+    cursor: pointer; height: auto; /* remove fixed height */
+    font-family: "Segoe UI", var(--sans);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .req-bar button#send-btn:disabled {
+    background: var(--border); color: var(--text-faint); cursor: not-allowed;
+  }
+
+  #method.m-GET { color: var(--get); }
+  #method.m-POST { color: var(--post); }
+  #method.m-PUT { color: var(--put); }
+  #method.m-PATCH { color: var(--patch); }
+  #method.m-DELETE { color: var(--delete); }
+
+  .tabs {
+    display: flex; gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .tab {
+    background: transparent; border: none; color: var(--text-dim);
+    padding: var(--vpad) 14px; font-size: 13px; font-family: inherit;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; position: relative;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+  .tab .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--border); color: var(--text-dim);
+    border-radius: 999px; min-width: 18px; height: 18px;
+    padding: 0 5px; font-size: 11px; margin-left: 6px;
+    font-weight: 500; box-sizing: border-box;
+  }
+  .tab.active .badge { background: var(--accent); color: #ffffff; }
+
+  .panel {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px;
+  }
+  .panel.hidden { display: none; }
+
+  input[type="text"], input[type="password"], select, textarea {
+    background: var(--bg-input); border: 1px solid var(--border);
+    color: var(--text); padding: 12px 14px; border-radius: var(--radius);
+    font-size: 13px; font-family: var(--sans); outline: none;
+  }
+  input[type="text"]::placeholder, textarea::placeholder { color: var(--text-faint); }
+
+  textarea {
+    font-family: var(--sans); font-size: 13px; line-height: 1.6;
+    resize: vertical; width: 100%; min-height: 140px;
+  }
+
+  select {
+    cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%238b949e' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 30px;
+  }
+
+  .kv-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .kv-row input[type="text"] { flex: 1; font-family: var(--sans); font-size: 13px; }
+  .kv-row .remove-btn {
+    width: 40px; height: 40px; flex: 0 0 40px; padding: 0;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-faint); border-radius: var(--radius);
+    cursor: pointer; font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .kv-row .remove-btn:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+
+  .add-row {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); padding: 8px 14px; border-radius: var(--radius);
+    font-size: 13px; cursor: pointer; margin-top: 4px; font-family: inherit;
+  }
+
+  .field-row { display: flex; gap: 12px; align-items: center; margin-bottom: 0px; }
+  .field-row:last-child { margin-bottom: 0; }
+  .field-row label { color: var(--text-dim); font-size: 13px; min-width: 80px; flex: 0 0 80px;  margin-bottom: 5px; }
+  .field-row select, .field-row input { flex: 1; }
+
+  .auth-fields { margin-top: 12px; }
+  .auth-fields:empty { margin-top: 0; }
+  .auth-fields input { width: 100%; margin-bottom: 8px; font-family: var(--sans); font-size: 13px; }
+  .auth-fields input:last-child { margin-bottom: 0; }
+
+  .output-section { margin-top: 24px; }
+
+  .response-meta {
+    display: none; gap: 16px; align-items: center;
+    margin-bottom: 0; font-size: 12px; color: var(--text-dim);
+    font-family: var(--sans); line-height: 1;
+  }
+  .response-meta.visible { display: flex; flex-wrap: wrap; }
+  .status-pill {
+    padding: 4px 10px; border-radius: var(--radius);
+    font-weight: 600; font-size: 12px; font-family: var(--sans);
+    line-height: 1; display: inline-flex; align-items: center;
+  }
+  .status-pill.ok { background: var(--success-bg); color: var(--success); }
+  .status-pill.warn { background: var(--warning-bg); color: var(--warning); }
+  .status-pill.err { background: var(--danger-bg); color: var(--danger); }
+  .meta-item { display: inline-flex; gap: 6px; align-items: center; line-height: 1; }
+  .meta-item strong { color: var(--text); font-weight: 500; }
+
+  .output-pane {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  .output-pane.hidden { display: none; }
+  .output-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 12px; height: 53px;
+    background: var(--bg-elev-2); border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--text-dim); font-family: var(--sans);
+    box-sizing: border-box;
+  }
+  .copy-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); padding: 4px 12px; border-radius: var(--radius);
+    font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { background: var(--success-bg); color: var(--success); border-color: var(--success); }
+
+  pre.output {
+    margin: 0; padding: 16px; font-family: var(--mono);
+    font-size: 12.5px; line-height: 1.6;
+    max-height: 480px; overflow: auto;
+    white-space: pre-wrap; word-break: break-word; color: var(--text);
+  }
+  pre.output.code { white-space: pre; word-break: normal; }
+  pre.output.empty {
+    color: var(--text-faint);
+    font-style: normal;
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+
+  .tok-tag, .tok-kw { color: #ff7b72; }
+  .tok-fn { color: #d2a8ff; }
+  .tok-var { color: #ffa657; }
+  .tok-str { color: #a5d6ff; }
+  .tok-num, .tok-const { color: #79c0ff; }
+  .tok-cmt { color: #8b949e; font-style: italic; }
+  .tok-punct { color: #c9d1d9; }
+
+  .j-key { color: #79c0ff; }
+  .j-str { color: #a5d6ff; }
+  .j-num, .j-bool { color: #ff7b72; }
+  .j-null { color: #8b949e; }
+
+  @media (max-width: 640px) {
+    .app { padding: 16px; }
+    .req-tabs-inner { padding: 0 16px; }
+    .req-bar { flex-direction: column; }
+    .req-bar select#method, .req-bar input#url, .req-bar button#send-btn {
+      width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+      padding: calc(var(--vpad) - 2px) 16px;
+      box-sizing: border-box;
+    }
+    .req-bar button#send-btn { border-bottom: none; }
+    .field-row { flex-direction: column; align-items: stretch; gap: 6px; }
+    .field-row label { flex: none; min-width: 0; }
+  }
+  #body-content,
+  #body-form-list {
+    margin-top: 12px;
+  }
+  @media(max-width: 768px) {
+    .kv-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: flex-end;
+      row-direction: column;
+      flex-direction: column;
+      align-content: flex-end;
+      justify-content: space-around;
+      input {
+        width: 100%;
+      }
+  }
+  }
+
+  /* fixed Install button style */
+  #pwa-install-btn {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 9999;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  }
+  #pwa-install-btn:hover { background: var(--accent-hover); }
+
+  /* show a separator only when running as a PWA / standalone */
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  .req-tabs-bar {
+    border-top: 1px solid var(--border);
+    /* optional: slightly reduce top padding if you want the border to sit tighter */
+    /* padding-top: 23px;  (24px original) */
+  }
+}
+
+/* fallback for iOS standalone (set by JS below) */
+body.is-standalone .req-tabs-bar {
+  border-top: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<!-- Fullscreen tab strip -->
+<div class="req-tabs-bar">
+  <div class="req-tabs-inner">
+    <div class="req-tabs" id="req-tab-strip">
+      <button class="rt-new" id="rt-new" type="button" title="New tab">+</button>
+    </div>
+  </div>
+</div>
+
+<!-- PWA install button -->
+<button id="pwa-install-btn" aria-hidden="true">Install</button>
+
+<div class="app">
+
+  <!-- Request bar -->
+  <div class="req-bar">
+    <select id="method" class="m-GET">
+      <option value="GET">GET</option>
+      <option value="POST">POST</option>
+      <option value="PUT">PUT</option>
+      <option value="PATCH">PATCH</option>
+      <option value="DELETE">DELETE</option>
+    </select>
+    <input type="text" id="url" placeholder="https://api.example.com/endpoint" value="https://jsonplaceholder.typicode.com/posts/1" spellcheck="false" autocomplete="off" />
+    <button id="send-btn">SEND</button>
+  </div>
+
+  <!-- Request tabs -->
+  <div class="tabs" id="req-tabs">
+    <button class="tab active" data-tab="params">Params <span class="badge" id="badge-params">0</span></button>
+    <button class="tab" data-tab="headers">Headers <span class="badge" id="badge-headers">1</span></button>
+    <button class="tab" data-tab="auth">Auth</button>
+    <button class="tab" data-tab="body">Body</button>
+  </div>
+
+  <div class="panel" id="panel-params">
+    <div id="params-list"></div>
+    <button class="add-row" data-target="params">+ Add parameter</button>
+  </div>
+
+  <div class="panel hidden" id="panel-headers">
+    <div id="headers-list"></div>
+    <button class="add-row" data-target="headers">+ Add header</button>
+  </div>
+
+  <div class="panel hidden" id="panel-auth">
+    <div class="field-row">
+      <label>Type</label>
+      <select id="auth-type">
+        <option value="none">No auth</option>
+        <option value="bearer">Bearer Token</option>
+        <option value="basic">Basic Auth</option>
+        <option value="apikey">API Key (Header)</option>
+      </select>
+    </div>
+    <div class="auth-fields" id="auth-fields"></div>
+  </div>
+
+  <div class="panel hidden" id="panel-body">
+    <div class="field-row">
+      <label>Type</label>
+      <select id="body-type">
+        <option value="none">No body</option>
+        <option value="json">JSON</option>
+        <option value="form">x-www-form-urlencoded</option>
+        <option value="raw">Raw text</option>
+      </select>
+    </div>
+    <div id="body-form" style="display: none;">
+      <div id="body-form-list"></div>
+      <button class="add-row" data-target="body-form" type="button">+ Add field</button>
+    </div>
+    <textarea id="body-content" placeholder='{"key": "value"}' style="display: none;" spellcheck="false"></textarea>
+  </div>
+
+  <div class="output-section">
+    <div class="tabs" id="out-tabs">
+      <button class="tab active" data-out="response">Response</button>
+      <button class="tab" data-out="code">PHP cURL</button>
+    </div>
+
+    <div class="output-pane" id="out-response">
+      <div class="output-toolbar">
+        <div class="response-meta" id="response-meta">
+          <span class="status-pill" id="status-pill">—</span>
+          <span class="meta-item">Time: <strong id="response-time">—</strong></span>
+          <span class="meta-item">Size: <strong id="response-size">—</strong></span>
+        </div>
+        <span id="response-empty-label">Response will appear here</span>
+      </div>
+      <pre class="output empty" id="response-body">Click <strong style="color:var(--accent)">Send</strong> to make a request, or switch to <strong>PHP cURL</strong> to see the generated code.</pre>
+    </div>
+
+    <div class="output-pane hidden" id="out-code">
+      <div class="output-toolbar">
+        <span>Generated PHP cURL</span>
+        <button class="copy-btn" id="copy-btn">Copy</button>
+      </div>
+      <pre class="output code" id="code-output"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'restclient_v1';
+  const SAVE_DEBOUNCE_MS = 300;
+  let saveTimer = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  // --- persistence helpers ---
+  function saveState() {
+    try {
+      const payload = {
+        tabs: tabs.map(t => ({ id: t.id, state: t.state })),
+        activeTabId: activeTabId,
+        nextTabId: nextTabId,
+        outTab: document.querySelector('#out-tabs .tab.active')?.dataset.out || 'response',
+        savedAt: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('saveState failed', e);
+    }
+  }
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, SAVE_DEBOUNCE_MS);
+  }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const p = JSON.parse(raw);
+      if (!p || !Array.isArray(p.tabs) || p.tabs.length === 0) return false;
+      tabs = p.tabs.map(t => ({ id: t.id, state: { ...makeDefaultState(), ...(t.state || {}) } }));
+      if (p.nextTabId && Number.isFinite(p.nextTabId)) nextTabId = p.nextTabId;
+      else nextTabId = (Math.max(...tabs.map(t => t.id)) || 0) + 1;
+      activeTabId = p.activeTabId && tabs.some(t => t.id === p.activeTabId) ? p.activeTabId : tabs[0].id;
+      renderTabStrip();
+      const active = tabs.find(t => t.id === activeTabId);
+      if (active) {
+        loadFormFromState(active.state);
+        renderResponse(active.state.response);
+      }
+      const out = p.outTab || 'response';
+      document.querySelectorAll('#out-tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.out === out));
+      $('out-response').classList.toggle('hidden', out !== 'response');
+      $('out-code').classList.toggle('hidden', out !== 'code');
+      updateCode();
+      return true;
+    } catch (e) {
+      console.warn('loadState failed', e);
+      return false;
+    }
+  }
+
+  // --- existing UI logic ---
+  document.querySelectorAll('#req-tabs .tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#req-tabs .tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#panel-params, #panel-headers, #panel-auth, #panel-body').forEach(p => p.classList.add('hidden'));
+      btn.classList.add('active');
+      $('panel-' + btn.dataset.tab).classList.remove('hidden');
+      scheduleSave();
+    });
+  });
+
+  document.querySelectorAll('#out-tabs .tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#out-tabs .tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      $('out-response').classList.toggle('hidden', btn.dataset.out !== 'response');
+      $('out-code').classList.toggle('hidden', btn.dataset.out !== 'code');
+      if (btn.dataset.out === 'code') updateCode();
+      scheduleSave();
+    });
+  });
+
+  const methodSel = $('method');
+  function updateMethodColor() { methodSel.className = 'm-' + methodSel.value; }
+  methodSel.addEventListener('change', () => { updateMethodColor(); updateCode(); scheduleSave(); });
+  updateMethodColor();
+
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, '&').replace(/"/g, '"').replace(/</g, '<');
+  }
+
+  function makeRow(target, key = '', value = '') {
+    const row = document.createElement('div');
+    row.className = 'kv-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Key" value="${escapeAttr(key)}" autocomplete="off" spellcheck="false" />
+      <input type="text" placeholder="Value" value="${escapeAttr(value)}" autocomplete="off" spellcheck="false" />
+      <button class="remove-btn" title="Remove" type="button">×</button>
+    `;
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      row.remove(); updateBadges(); updateCode(); scheduleSave();
+    });
+    row.querySelectorAll('input').forEach(i => i.addEventListener('input', () => {
+      updateBadges(); updateCode(); scheduleSave();
+    }));
+    return row;
+  }
+
+  document.querySelectorAll('.add-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      $(target + '-list').appendChild(makeRow(target));
+      updateBadges();
+      updateCode();
+      scheduleSave();
+    });
+  });
+
+  function countFilled(target) {
+    let n = 0;
+    document.querySelectorAll(`#${target}-list .kv-row`).forEach(row => {
+      if (row.querySelectorAll('input')[0].value.trim()) n++;
+    });
+    return n;
+  }
+  function updateBadges() {
+    $('badge-params').textContent = countFilled('params');
+    $('badge-headers').textContent = countFilled('headers');
+  }
+
+  function renderAuthFields() {
+    const type = $('auth-type').value;
+    const wrap = $('auth-fields');
+    wrap.innerHTML = '';
+    if (type === 'bearer') {
+      wrap.innerHTML = `<input type="text" id="auth-token" placeholder="Token" autocomplete="off" spellcheck="false" />`;
+    } else if (type === 'basic') {
+      wrap.innerHTML = `
+        <input type="text" id="auth-user" placeholder="Username" autocomplete="off" spellcheck="false" />
+        <input type="password" id="auth-pass" placeholder="Password" autocomplete="off" />`;
+    } else if (type === 'apikey') {
+      wrap.innerHTML = `
+        <input type="text" id="auth-key-name" placeholder="Header name (e.g. X-API-Key)" autocomplete="off" spellcheck="false" />
+        <input type="text" id="auth-key-val" placeholder="Key value" autocomplete="off" spellcheck="false" />`;
+    }
+    wrap.querySelectorAll('input').forEach(i => {
+      i.addEventListener('input', () => { updateCode(); scheduleSave(); });
+    });
+  }
+  $('auth-type').addEventListener('change', () => { renderAuthFields(); updateCode(); scheduleSave(); });
+
+  function renderBody() {
+    const type = $('body-type').value;
+    const ta = $('body-content');
+    const formWrap = $('body-form');
+    if (type === 'form') {
+      ta.style.display = 'none'; formWrap.style.display = 'block';
+      if (!$('body-form-list').children.length) $('body-form-list').appendChild(makeRow('body-form'));
+    } else if (type === 'none') {
+      ta.style.display = 'none'; formWrap.style.display = 'none';
+    } else {
+      ta.style.display = 'block'; formWrap.style.display = 'none';
+      if (type === 'json') ta.placeholder = '{\n  "key": "value"\n}';
+      else if (type === 'raw') ta.placeholder = 'Raw text body';
+    }
+    scheduleSave();
+  }
+  $('body-type').addEventListener('change', () => { renderBody(); updateCode(); });
+  $('body-content').addEventListener('input', () => { updateCode(); scheduleSave(); });
+  $('url').addEventListener('input', () => { updateCode(); scheduleSave(); });
+
+  function collectKV(target) {
+    const out = [];
+    document.querySelectorAll(`#${target}-list .kv-row`).forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      const k = inputs[0].value.trim();
+      const v = inputs[1].value;
+      if (k) out.push([k, v]);
+    });
+    return out;
+  }
+
+  function buildConfig() {
+    const bodyType = $('body-type').value;
+    let bodyContent = '';
+    if (bodyType === 'form') {
+      bodyContent = collectKV('body-form').map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+    } else {
+      bodyContent = $('body-content').value;
+    }
+    const cfg = {
+      method: $('method').value,
+      url: $('url').value.trim(),
+      params: collectKV('params'),
+      headers: collectKV('headers'),
+      auth: { type: $('auth-type').value },
+      body: { type: bodyType, content: bodyContent }
+    };
+    const t = cfg.auth.type;
+    const at = $('auth-token'), au = $('auth-user'), ap = $('auth-pass'),
+          akn = $('auth-key-name'), akv = $('auth-key-val');
+    if (t === 'bearer') cfg.auth.token = at ? at.value : '';
+    else if (t === 'basic') { cfg.auth.user = au ? au.value : ''; cfg.auth.pass = ap ? ap.value : ''; }
+    else if (t === 'apikey') { cfg.auth.keyName = akn ? akn.value : ''; cfg.auth.keyVal = akv ? akv.value : ''; }
+    return cfg;
+  }
+
+  function buildFinalUrl(cfg) {
+    if (!cfg.url) return '';
+    if (!cfg.params.length) return cfg.url;
+    const qs = cfg.params.map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(v)).join('&');
+    return cfg.url + (cfg.url.includes('?') ? '&' : '?') + qs;
+  }
+
+  function effectiveHeaders(cfg) {
+    const headers = cfg.headers.slice();
+    if (cfg.auth.type === 'bearer' && cfg.auth.token) headers.push(['Authorization', 'Bearer ' + cfg.auth.token]);
+    else if (cfg.auth.type === 'apikey' && cfg.auth.keyName) headers.push([cfg.auth.keyName, cfg.auth.keyVal]);
+    const hasCT = headers.some(h => h[0].toLowerCase() === 'content-type');
+    if (!hasCT && cfg.body.content) {
+      if (cfg.body.type === 'json') headers.push(['Content-Type', 'application/json']);
+      else if (cfg.body.type === 'form') headers.push(['Content-Type', 'application/x-www-form-urlencoded']);
+    }
+    return headers;
+  }
+
+  function phpEscape(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+  function generatePHP(cfg) {
+    const url = buildFinalUrl(cfg) || 'https://api.example.com/endpoint';
+    const headers = effectiveHeaders(cfg);
+    const lines = [];
+    lines.push('$curl = curl_init();');
+    lines.push('curl_setopt_array($curl, [');
+    lines.push(`    CURLOPT_URL => '${phpEscape(url)}',`);
+    lines.push('    CURLOPT_RETURNTRANSFER => true,');
+    lines.push('    CURLOPT_TIMEOUT => 30,');
+    if (cfg.method !== 'GET') lines.push(`    CURLOPT_CUSTOMREQUEST => '${cfg.method}',`);
+    if (cfg.body.type !== 'none' && cfg.body.content) lines.push(`    CURLOPT_POSTFIELDS => '${phpEscape(cfg.body.content)}',`);
+    if (headers.length) {
+      lines.push('    CURLOPT_HTTPHEADER => [');
+      headers.forEach(([k, v]) => lines.push(`        '${phpEscape(k)}: ${phpEscape(v)}',`));
+      lines.push('    ],');
+    }
+    if (cfg.auth.type === 'basic' && cfg.auth.user) {
+      lines.push(`    CURLOPT_USERPWD => '${phpEscape(cfg.auth.user)}:${phpEscape(cfg.auth.pass)}',`);
+      lines.push('    CURLOPT_HTTPAUTH => CURLAUTH_BASIC,');
+    }
+    lines.push(']);');
+    lines.push('$response = curl_exec($curl);');
+    lines.push('$response = json_decode($response);');
+    lines.push('curl_close($curl);');
+    return lines.join('\n');
+  }
+
+  function escapeHtml(s) { return s.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>'); }
+
+  function highlightPHP(code) {
+    const KEYWORDS = new Set(['if', 'else', 'echo', 'true', 'false', 'null', 'return', 'new']);
+    let out = '', i = 0; const n = code.length;
+    while (i < n) {
+      const c = code[i];
+      if (c === "'") {
+        let j = i + 1;
+        while (j < n) { if (code[j] === '\\' && j + 1 < n) { j += 2; continue; } if (code[j] === "'") { j++; break; } j++; }
+        out += '<span class="tok-str">' + escapeHtml(code.slice(i, j)) + '</span>'; i = j; continue;
+      }
+      if (c === '"') {
+        let j = i + 1;
+        while (j < n) { if (code[j] === '\\' && j + 1 < n) { j += 2; continue; } if (code[j] === '"') { j++; break; } j++; }
+        out += '<span class="tok-str">' + escapeHtml(code.slice(i, j)) + '</span>'; i = j; continue;
+      }
+      if (c === '$' && /[a-zA-Z_]/.test(code[i + 1] || '')) {
+        let j = i + 1;
+        while (j < n && /[a-zA-Z0-9_]/.test(code[j])) j++;
+        out += '<span class="tok-var">' + escapeHtml(code.slice(i, j)) + '</span>'; i = j; continue;
+      }
+      if (/[a-zA-Z_]/.test(c)) {
+        let j = i;
+        while (j < n && /[a-zA-Z0-9_]/.test(code[j])) j++;
+        const word = code.slice(i, j);
+        let cls = null;
+        if (KEYWORDS.has(word)) cls = 'tok-kw';
+        else if (/^[A-Z][A-Z0-9_]+$/.test(word)) cls = 'tok-const';
+        else { let k = j; while (k < n && code[k] === ' ') k++; if (code[k] === '(') cls = 'tok-fn'; }
+        out += cls ? ('<span class="' + cls + '">' + escapeHtml(word) + '</span>') : escapeHtml(word);
+        i = j; continue;
+      }
+      if (/[0-9]/.test(c)) {
+        let j = i;
+        while (j < n && /[0-9.]/.test(code[j])) j++;
+        out += '<span class="tok-num">' + escapeHtml(code.slice(i, j)) + '</span>'; i = j; continue;
+      }
+      out += escapeHtml(c); i++;
+    }
+    return out;
+  }
+
+  function updateCode() {
+    const code = generatePHP(buildConfig());
+    $('code-output').innerHTML = highlightPHP(code);
+    $('code-output').dataset.raw = code;
+    refreshActiveTabLabel();
+    scheduleSave();
+  }
+
+  let tabs = [];
+  let activeTabId = null;
+  let nextTabId = 1;
+
+  function makeDefaultState() {
+    return {
+      method: 'GET', url: 'https://jsonplaceholder.typicode.com/posts/1',
+      params: [], headers: [['Content-Type', 'application/json']],
+      authType: 'none', authToken: '', authUser: '', authPass: '',
+      authKeyName: '', authKeyVal: '',
+      bodyType: 'none', bodyContent: '', bodyForm: [], response: null
+    };
+  }
+
+  function serializeForm() {
+    return {
+      method: $('method').value, url: $('url').value,
+      params: collectKV('params'), headers: collectKV('headers'),
+      authType: $('auth-type').value,
+      authToken: ($('auth-token') || {}).value || '',
+      authUser: ($('auth-user') || {}).value || '',
+      authPass: ($('auth-pass') || {}).value || '',
+      authKeyName: ($('auth-key-name') || {}).value || '',
+      authKeyVal: ($('auth-key-val') || {}).value || '',
+      bodyType: $('body-type').value,
+      bodyContent: $('body-content').value,
+      bodyForm: collectKV('body-form')
+    };
+  }
+
+  function loadFormFromState(s) {
+    $('method').value = s.method; updateMethodColor();
+    $('url').value = s.url;
+    $('params-list').innerHTML = '';
+    if (s.params && s.params.length) s.params.forEach(([k, v]) => $('params-list').appendChild(makeRow('params', k, v)));
+    else $('params-list').appendChild(makeRow('params'));
+    $('headers-list').innerHTML = '';
+    if (s.headers && s.headers.length) s.headers.forEach(([k, v]) => $('headers-list').appendChild(makeRow('headers', k, v)));
+    else $('headers-list').appendChild(makeRow('headers'));
+    $('auth-type').value = s.authType; renderAuthFields();
+    if (s.authType === 'bearer' && $('auth-token')) $('auth-token').value = s.authToken;
+    else if (s.authType === 'basic') {
+      if ($('auth-user')) $('auth-user').value = s.authUser;
+      if ($('auth-pass')) $('auth-pass').value = s.authPass;
+    } else if (s.authType === 'apikey') {
+      if ($('auth-key-name')) $('auth-key-name').value = s.authKeyName;
+      if ($('auth-key-val')) $('auth-key-val').value = s.authKeyVal;
+    }
+    $('body-type').value = s.bodyType;
+    $('body-content').value = s.bodyContent;
+    $('body-form-list').innerHTML = '';
+    if (s.bodyForm && s.bodyForm.length) s.bodyForm.forEach(([k, v]) => $('body-form-list').appendChild(makeRow('body-form', k, v)));
+    renderBody();
+    updateBadges(); updateCode();
+  }
+
+  function tabLabel(state) {
+    if (!state.url) return 'Untitled';
+    try {
+      const u = new URL(state.url);
+      const path = u.pathname.split('/').filter(Boolean).pop() || u.hostname;
+      return path;
+    } catch (e) {
+      const parts = state.url.split(/[/?#]/).filter(Boolean);
+      return parts[parts.length - 1] || state.url.slice(0, 24) || 'Untitled';
+    }
+  }
+
+  function renderTabStrip() {
+    const strip = $('req-tab-strip');
+    Array.from(strip.querySelectorAll('.rt-tab')).forEach(el => el.remove());
+    const newBtn = $('rt-new');
+    tabs.forEach(tab => {
+      const btn = document.createElement('button');
+      btn.className = 'rt-tab' + (tab.id === activeTabId ? ' active' : '');
+      btn.dataset.id = tab.id;
+      btn.type = 'button';
+      btn.innerHTML = `
+        <span class="rt-method m-${tab.state.method}">${tab.state.method}</span>
+        <span class="rt-title"></span>
+        <span class="rt-close" title="Close">×</span>
+      `;
+      btn.querySelector('.rt-title').textContent = tabLabel(tab.state);
+      btn.draggable = true;
+      btn.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(tab.id));
+        btn.classList.add('dragging');
+      });
+      btn.addEventListener('dragend', () => {
+        btn.classList.remove('dragging');
+        document.querySelectorAll('.rt-tab.drag-over').forEach(el => el.classList.remove('drag-over'));
+        scheduleSave();
+      });
+      btn.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        btn.classList.add('drag-over');
+      });
+      btn.addEventListener('dragleave', () => btn.classList.remove('drag-over'));
+      btn.addEventListener('drop', (e) => {
+        e.preventDefault();
+        btn.classList.remove('drag-over');
+        const fromId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+        const toId = tab.id;
+        if (fromId === toId) return;
+        const fromIdx = tabs.findIndex(t => t.id === fromId);
+        const toIdx = tabs.findIndex(t => t.id === toId);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = tabs.splice(fromIdx, 1);
+        tabs.splice(toIdx, 0, moved);
+        renderTabStrip();
+        scheduleSave();
+      });
+
+      // Click handler: close when close target clicked, otherwise activate.
+      btn.addEventListener('click', (e) => {
+        const closeTarget = e.target.closest('.rt-close');
+        if (closeTarget) {
+          closeTab(tab.id);
+          scheduleSave();
+          return;
+        }
+        switchToTab(tab.id);
+        scheduleSave();
+      });
+
+      strip.insertBefore(btn, newBtn);
+    });
+    scheduleSave();
+  }
+
+  function refreshActiveTabLabel() {
+    const tab = tabs.find(t => t.id === activeTabId);
+    if (!tab) return;
+    tab.state.method = $('method').value;
+    tab.state.url = $('url').value;
+    const btn = document.querySelector(`.rt-tab[data-id="${tab.id}"]`);
+    if (btn) {
+      const m = btn.querySelector('.rt-method');
+      m.className = 'rt-method m-' + tab.state.method;
+      m.textContent = tab.state.method;
+      btn.querySelector('.rt-title').textContent = tabLabel(tab.state);
+    }
+    scheduleSave();
+  }
+
+  function newTab(state) {
+    if (activeTabId !== null) {
+      const cur = tabs.find(t => t.id === activeTabId);
+      if (cur) cur.state = { ...serializeForm(), response: cur.state.response };
+    }
+    const id = nextTabId++;
+    tabs.push({ id, state: state || makeDefaultState() });
+    activeTabId = id;
+    const newState = tabs[tabs.length - 1].state;
+    loadFormFromState(newState);
+    renderResponse(newState.response);
+    renderTabStrip();
+    scheduleSave();
+  }
+
+  function switchToTab(id) {
+    if (id === activeTabId) return;
+    const cur = tabs.find(t => t.id === activeTabId);
+    if (cur) cur.state = { ...serializeForm(), response: cur.state.response };
+    const next = tabs.find(t => t.id === id);
+    if (!next) return;
+    activeTabId = id;
+    loadFormFromState(next.state);
+    renderResponse(next.state.response);
+    renderTabStrip();
+    scheduleSave();
+  }
+
+  function closeTab(id) {
+    const idx = tabs.findIndex(t => t.id === id);
+    if (idx === -1) return;
+    tabs.splice(idx, 1);
+    if (activeTabId === id) {
+      if (tabs.length === 0) { newTab(); return; }
+      const newActive = tabs[Math.max(0, idx - 1)];
+      activeTabId = newActive.id;
+      loadFormFromState(newActive.state);
+      renderResponse(newActive.state.response);
+    }
+    renderTabStrip();
+    scheduleSave();
+  }
+
+  $('rt-new').addEventListener('click', () => { newTab(); });
+
+  // Convert vertical wheel scroll to horizontal scroll on the tab strip
+  $('req-tab-strip').addEventListener('wheel', (e) => {
+    if (e.deltaY === 0) return;
+    e.preventDefault();
+    $('req-tab-strip').scrollLeft += e.deltaY;
+  }, { passive: false });
+
+  // initialize tabs from storage (if available), otherwise create default
+  (function initTabs() {
+    const ok = loadState();
+    if (!ok) {
+      // no saved state — create a default tab
+      tabs = [];
+      activeTabId = null;
+      nextTabId = 1;
+      newTab();
+    }
+  })();
+
+  $('copy-btn').addEventListener('click', () => {
+    const text = $('code-output').dataset.raw || $('code-output').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = $('copy-btn');
+      btn.textContent = '✓ Copied'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+    });
+  });
+
+  function highlightJSON(json) {
+    json = json.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+    return json.replace(
+      /("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      (match) => {
+        let cls = 'j-num';
+        if (/^"/.test(match)) cls = /:$/.test(match) ? 'j-key' : 'j-str';
+        else if (/true|false/.test(match)) cls = 'j-bool';
+        else if (/null/.test(match)) cls = 'j-null';
+        return '<span class="' + cls + '">' + match + '</span>';
+      }
+    );
+  }
+
+  function renderResponse(r) {
+    const meta = $('response-meta'); const bodyEl = $('response-body');
+    const emptyLabel = $('response-empty-label'); const pill = $('status-pill');
+    if (!r) {
+      meta.classList.remove('visible');
+      emptyLabel.style.display = 'inline';
+      bodyEl.classList.add('empty'); bodyEl.style.color = '';
+      bodyEl.innerHTML = 'Click <strong style="color:var(--accent)">Send</strong> to make a request, or switch to <strong>PHP cURL</strong> to see the generated code.';
+      return;
+    }
+    if (r.isError) {
+      meta.classList.remove('visible'); emptyLabel.style.display = 'none';
+      bodyEl.classList.remove('empty'); bodyEl.style.color = 'var(--danger)';
+      bodyEl.textContent = r.body; return;
+    }
+    pill.textContent = r.status + ' ' + (r.statusText || '');
+    pill.className = 'status-pill';
+    if (r.status >= 200 && r.status < 300) pill.classList.add('ok');
+    else if (r.status >= 400) pill.classList.add('err');
+    else pill.classList.add('warn');
+    $('response-time').textContent = r.time + ' ms';
+    $('response-size').textContent = r.size < 1024 ? r.size + ' B' : (r.size / 1024).toFixed(1) + ' KB';
+    meta.classList.add('visible'); emptyLabel.style.display = 'none';
+    bodyEl.classList.remove('empty'); bodyEl.style.color = '';
+    if (r.isJson) bodyEl.innerHTML = highlightJSON(r.body);
+    else bodyEl.textContent = r.body || '(empty body)';
+    scheduleSave();
+  }
+
+  $('send-btn').addEventListener('click', async () => {
+    const cfg = buildConfig();
+    if (!cfg.url) { $('response-body').textContent = 'Please enter a URL.'; return; }
+    const finalUrl = buildFinalUrl(cfg);
+    const headers = {};
+    effectiveHeaders(cfg).forEach(([k, v]) => headers[k] = v);
+    if (cfg.auth.type === 'basic' && cfg.auth.user) {
+      headers['Authorization'] = 'Basic ' + btoa(cfg.auth.user + ':' + cfg.auth.pass);
+    }
+    const init = { method: cfg.method, headers };
+    if (cfg.method !== 'GET' && cfg.method !== 'HEAD' && cfg.body.type !== 'none' && cfg.body.content) {
+      init.body = cfg.body.content;
+    }
+    document.querySelector('#out-tabs .tab[data-out="response"]').click();
+    const bodyEl = $('response-body'); const meta = $('response-meta');
+    const emptyLabel = $('response-empty-label'); const sendBtn = $('send-btn');
+    const requestingTabId = activeTabId;
+    sendBtn.disabled = true; sendBtn.textContent = 'Sending…';
+    bodyEl.textContent = 'Sending request…'; bodyEl.classList.add('empty');
+    bodyEl.style.color = ''; meta.classList.remove('visible');
+    emptyLabel.style.display = 'inline';
+    const start = performance.now();
+    let responseData = null;
+    try {
+      const res = await fetch(finalUrl, init);
+      const elapsed = Math.round(performance.now() - start);
+      const text = await res.text();
+      const sizeBytes = new Blob([text]).size;
+      let isJson = false; let pretty = text;
+      try { const parsed = JSON.parse(text); pretty = JSON.stringify(parsed, null, 2); isJson = true; } catch (e) {}
+      responseData = { status: res.status, statusText: res.statusText || '', time: elapsed, size: sizeBytes, body: pretty, isJson, isError: false };
+    } catch (err) {
+      responseData = { isError: true, body: 'Request failed: ' + err.message + '\n\nNote: browser CORS may block requests that work fine from PHP. The generated PHP cURL code will work server-side regardless.' };
+    } finally {
+      sendBtn.disabled = false; sendBtn.textContent = 'Send';
+    }
+    const reqTab = tabs.find(t => t.id === requestingTabId);
+    if (reqTab) reqTab.state.response = responseData;
+    if (activeTabId === requestingTabId) renderResponse(responseData);
+    scheduleSave();
+  });
+
+  $('url').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); $('send-btn').click(); }
+  });
+
+  // --- tab state management on page unload / preserve ---
+  window.addEventListener('beforeunload', saveState);
+
+  // expose small helpers for debugging (optional)
+  window.__restClient = {
+    clearSaved() { localStorage.removeItem(STORAGE_KEY); console.log('saved state removed'); }
+  };
+})();
+</script>
+
+<!-- PWA: Service Worker registration + install prompt handling -->
+<script>
+  // Register the service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('Service Worker registered:', reg);
+    }).catch(err => {
+      console.warn('Service Worker registration failed:', err);
+    });
+  }
+
+  // Manage the installation prompt
+  let deferredPrompt = null;
+  const installBtn = document.getElementById('pwa-install-btn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent automatic prompt
+    e.preventDefault();
+    deferredPrompt = e;
+    // show custom install button
+    installBtn.style.display = 'inline-flex';
+    installBtn.setAttribute('aria-hidden', 'false');
+  });
+
+  installBtn.addEventListener('click', async () => {
+    installBtn.style.display = 'none';
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    console.log('User install choice:', choice);
+    deferredPrompt = null;
+  });
+
+  // Hide install button if app is already installed
+  window.addEventListener('appinstalled', () => {
+    console.log('PWA installed');
+    installBtn.style.display = 'none';
+  });
+
+  // Optional: show a small helper when offline
+  window.addEventListener('offline', () => {
+    console.log('You are offline');
+  });
+
+  // detect standalone/installed mode and add body class for iOS fallback
+(function markStandalone() {
+  function update() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                          || window.matchMedia('(display-mode: fullscreen)').matches
+                          || window.navigator.standalone === true;
+    if (isStandalone) document.body.classList.add('is-standalone');
+    else document.body.classList.remove('is-standalone');
+  }
+  update();
+  // listen for changes (some browsers fire change events)
+  try {
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', update);
+  } catch (e) {
+    // older browsers
+    window.matchMedia('(display-mode: standalone)').addListener(update);
+  }
+})();
+
+</script>
+
+</body>
+</html>
